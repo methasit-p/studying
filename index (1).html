@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
+<title>Study Timer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#7c5cff; --accent2:#22d3ee;
+  --grad:linear-gradient(135deg,var(--accent),var(--accent2));
+  --radius:22px; --ease:cubic-bezier(.2,.8,.2,1);
+}
+[data-theme="dark"]{
+  --bg:#0b0c10; --surface:rgba(255,255,255,.045); --surface2:rgba(255,255,255,.08);
+  --border:rgba(255,255,255,.08); --text:#f3f4f6; --muted:#8b909b; --shadow:0 10px 40px rgba(0,0,0,.35);
+  --blob1:rgba(124,92,255,.28); --blob2:rgba(34,211,238,.16);
+}
+[data-theme="light"]{
+  --bg:#f5f6fb; --surface:rgba(255,255,255,.8); --surface2:#eef0f6;
+  --border:rgba(15,20,40,.08); --text:#12141a; --muted:#6b7080; --shadow:0 10px 30px rgba(30,40,80,.08);
+  --blob1:rgba(124,92,255,.16); --blob2:rgba(34,211,238,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text)}
+body{font-family:"Inter","IBM Plex Sans Thai",system-ui,sans-serif;min-height:100vh;overflow-x:hidden;transition:background .3s}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.bg{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(600px 400px at 10% -10%,var(--blob1),transparent 70%),
+             radial-gradient(500px 400px at 110% 10%,var(--blob2),transparent 70%)}
+.app{max-width:560px;margin:0 auto;padding:18px 18px 120px}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:40px;height:40px;border-radius:13px;background:var(--grad);display:grid;place-items:center;box-shadow:0 6px 20px rgba(124,92,255,.4)}
+.brand b{font-size:17px;display:block;letter-spacing:-.2px}
+.brand small{font-size:12.5px;color:var(--muted)}
+.chip{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--border);font-size:12.5px;color:var(--muted);backdrop-filter:blur(12px)}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.chip[data-s="ok"] .dot{background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.15)}
+.chip[data-s="syncing"] .dot{background:#f59e0b;animation:pulse 1s infinite}
+.chip[data-s="error"] .dot{background:#ef4444}
+
+/* glass card */
+.glass{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:var(--shadow)}
+.card{padding:18px;margin-bottom:14px}
+.card h3{font-size:15px;font-weight:600}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.muted{color:var(--muted)}
+
+/* hero */
+.hero{padding:26px 18px 18px;text-align:center;margin-bottom:22px}
+.ring-wrap{position:relative;width:230px;height:230px;margin:0 auto}
+.ring{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:12;stroke-linecap:round}
+.ring .track{stroke:var(--surface2)}
+.ring .prog{stroke:url(#grad);transition:stroke-dashoffset .6s var(--ease)}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-center small{font-size:13px;color:var(--muted)}
+.big{font-size:40px;font-weight:700;letter-spacing:-1px;margin:2px 0 6px}
+.goal-btn{font-size:12.5px;color:var(--muted);padding:5px 10px;border-radius:999px;background:var(--surface2)}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);margin-top:18px;border-top:1px solid var(--border);padding-top:16px}
+.mini b{display:block;font-size:20px;font-weight:700}
+.mini span{font-size:12px;color:var(--muted)}
+.mini>div+div{border-left:1px solid var(--border)}
+
+/* subjects */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin:0 4px 12px}
+.sec-head h2{font-size:18px;font-weight:700}
+.ghost{padding:8px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--border);font-size:13.5px;font-weight:500}
+.ghost:hover{background:var(--surface2)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.subj{position:relative;padding:16px;border-radius:20px;background:var(--surface);border:1px solid var(--border);cursor:pointer;overflow:hidden;transition:transform .2s var(--ease),border-color .2s;text-align:left}
+.subj::before{content:"";position:absolute;inset:0;background:radial-gradient(180px 120px at 0% 0%,color-mix(in srgb,var(--c) 22%,transparent),transparent 70%);pointer-events:none}
+.subj:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--c) 45%,transparent)}
+.subj:active{transform:scale(.98)}
+.subj-top{display:flex;justify-content:space-between;align-items:center;position:relative}
+.sdot{width:11px;height:11px;border-radius:4px;background:var(--c);box-shadow:0 0 12px var(--c)}
+.more{width:28px;height:28px;border-radius:9px;color:var(--muted);font-size:16px;line-height:1}
+.more:hover{background:var(--surface2)}
+.sname{font-weight:600;font-size:15.5px;margin:12px 0 2px;position:relative;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stime{font-size:14px;color:var(--muted);position:relative}
+.splay{position:absolute;right:14px;bottom:14px;width:38px;height:38px;border-radius:50%;background:var(--c);display:grid;place-items:center;color:#fff;box-shadow:0 6px 18px color-mix(in srgb,var(--c) 50%,transparent)}
+.add-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:118px;border:1.5px dashed var(--border);background:transparent;color:var(--muted);font-size:14px}
+.add-card:hover{color:var(--text);border-color:var(--accent)}
+.add-card span{font-size:24px;line-height:1}
+
+/* tab bar */
+.tabbar{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:4px;padding:6px;border-radius:22px;z-index:5}
+.tabbar button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 16px;white-space:nowrap;border-radius:16px;font-size:11.5px;color:var(--muted);transition:all .2s var(--ease)}
+.tabbar button.on{background:var(--surface2);color:var(--text)}
+.tabbar svg{width:21px;height:21px}
+.page{display:none;animation:fade .35s var(--ease)}
+.page.on{display:block}
+
+/* stats */
+.week{display:flex;align-items:flex-end;gap:10px;height:170px}
+.wcol{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;gap:6px}
+.wbar{width:100%;max-width:34px;flex:1;display:flex;flex-direction:column-reverse;border-radius:10px;overflow:hidden;background:var(--surface2)}
+.wbar i{display:block;width:100%}
+.wlab{font-size:11.5px;color:var(--muted)}
+.wcol.today .wlab{color:var(--text);font-weight:600}
+.wval{font-size:11px;color:var(--muted);height:14px}
+.donut-wrap{display:flex;align-items:center;gap:20px}
+.donut{width:136px;height:136px;border-radius:50%;flex-shrink:0;position:relative;background:var(--surface2)}
+.donut-hole{position:absolute;inset:18px;border-radius:50%;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut-hole b{font-size:17px}.donut-hole small{font-size:11px;color:var(--muted)}
+.legend{flex:1;min-width:0}
+.lg{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:13.5px}
+.lg i{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.lg .n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lg .t{color:var(--muted)}
+.heat-days,.heat{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.heat-days{font-size:11px;color:var(--muted);text-align:center;margin-bottom:6px}
+.heat i{aspect-ratio:1;border-radius:7px;background:var(--surface2);position:relative}
+.heat i[data-l="1"]{background:color-mix(in srgb,var(--accent) 30%,transparent)}
+.heat i[data-l="2"]{background:color-mix(in srgb,var(--accent) 55%,transparent)}
+.heat i[data-l="3"]{background:color-mix(in srgb,var(--accent) 80%,transparent)}
+.heat i[data-l="4"]{background:var(--grad)}
+.heat i.today{outline:2px solid var(--text);outline-offset:1px}
+.heat i.future{visibility:hidden}
+.heat-legend{display:flex;align-items:center;justify-content:flex-end;gap:5px;font-size:11px;color:var(--muted);margin-top:10px}
+.heat-legend i{width:12px;height:12px;border-radius:3px}
+
+/* rank */
+.rk{display:flex;align-items:center;gap:12px;padding:11px 4px;border-top:1px solid var(--border)}
+.rk:first-child{border-top:none}
+.rk .pos{width:26px;text-align:center;font-weight:700;color:var(--muted)}
+.rk .av{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;font-weight:700;color:#fff;flex-shrink:0;position:relative}
+.rk .av .live{position:absolute;right:-3px;bottom:-3px;width:13px;height:13px;border-radius:50%;background:#22c55e;border:2.5px solid var(--bg);animation:pulse 1.6s infinite}
+.rk .who{flex:1;min-width:0}
+.rk .who b{display:block;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rk .who small{font-size:12px;color:var(--muted)}
+.rk .who small.on{color:#22c55e}
+.rk .tm{font-weight:600;font-size:15px}
+.rk.me{background:color-mix(in srgb,var(--accent) 10%,transparent);border-radius:14px;border-top-color:transparent}
+.empty{text-align:center;padding:26px 10px;color:var(--muted);font-size:14px;line-height:1.6}
+
+/* forms */
+.form label{display:block;font-size:13px;color:var(--muted);margin-bottom:14px}
+.form input{display:block;width:100%;margin-top:7px;padding:12px 14px;border-radius:13px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:15px;outline:none;transition:border .2s}
+.form input:focus{border-color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row-between{display:flex;align-items:center;justify-content:space-between;font-size:14px}
+.btn{padding:12px 18px;border-radius:13px;background:var(--grad);color:#fff;font-weight:600;font-size:14.5px;box-shadow:0 6px 18px rgba(124,92,255,.35)}
+.btn:active,.ghost:active{transform:scale(.97)}
+.seg{display:flex;background:var(--surface2);padding:4px;border-radius:12px}
+.seg button{padding:7px 14px;border-radius:9px;font-size:13px;color:var(--muted)}
+.seg button.on{background:var(--bg);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.danger{color:#ef4444}
+.help{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:4px}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.modal.on{display:flex;animation:fade .2s}
+.sheet{width:100%;max-width:520px;background:var(--bg);border:1px solid var(--border);border-radius:26px 26px 0 0;padding:22px 20px calc(24px + env(safe-area-inset-bottom));animation:up .3s var(--ease)}
+@media(min-width:600px){.modal{align-items:center}.sheet{border-radius:26px}}
+.sheet h3{font-size:19px;margin-bottom:16px}
+.swatches{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 20px}
+.sw{width:34px;height:34px;border-radius:11px;background:var(--c);transition:transform .15s}
+.sw.on{outline:3px solid var(--text);outline-offset:2px;transform:scale(1.05)}
+.sheet .row{justify-content:flex-end}
+
+/* focus */
+#focus{position:fixed;inset:0;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;gap:26px;color:#fff;
+  background:radial-gradient(700px 500px at 50% 20%,color-mix(in srgb,var(--fc,#7c5cff) 35%,transparent),transparent 70%),#05060a}
+#focus.on{display:flex;animation:fade .4s}
+.f-chip{display:flex;align-items:center;gap:9px;padding:9px 16px;border-radius:999px;background:rgba(255,255,255,.08);font-size:15px}
+.f-chip i{width:10px;height:10px;border-radius:50%;background:var(--fc)}
+.f-ring{position:relative;width:min(78vw,320px);aspect-ratio:1}
+.f-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.f-ring circle{fill:none;stroke-width:6;stroke-linecap:round}
+.f-ring .track{stroke:rgba(255,255,255,.08)}
+.f-ring .prog{stroke:var(--fc);filter:drop-shadow(0 0 8px var(--fc));transition:stroke-dashoffset 1s linear}
+.f-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.f-time{font-size:min(14vw,60px);font-weight:300;letter-spacing:-1px}
+.f-sub{font-size:14px;opacity:.6;margin-top:4px}
+.f-stop{display:flex;align-items:center;gap:10px;padding:16px 34px;border-radius:999px;background:#fff;color:#05060a;font-weight:700;font-size:16px;box-shadow:0 10px 40px rgba(255,255,255,.15)}
+.f-stop:active{transform:scale(.96)}
+.f-hint{font-size:12px;opacity:.4;text-align:center;padding:0 20px}
+
+/* toast */
+#toast{position:fixed;left:50%;top:18px;transform:translate(-50%,-250%);padding:12px 18px;border-radius:14px;background:var(--text);color:var(--bg);font-size:14px;font-weight:500;z-index:40;transition:transform .35s var(--ease);max-width:90vw;box-shadow:var(--shadow)}
+#toast.on{transform:translate(-50%,0)}
+
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pulse{50%{opacity:.4}}
+@media(max-width:380px){.big{font-size:34px}.ring-wrap{width:200px;height:200px}.tabbar button{padding:8px 12px}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg></div>
+      <div><b>Study Timer</b><small id="dateText"></small></div>
+    </div>
+    <button class="chip" id="syncChip" data-s="local"><span class="dot"></span><span id="syncText">ในเครื่อง</span></button>
+  </header>
+
+  <!-- หน้าจับเวลา -->
+  <section class="page on" id="p-home">
+    <div class="hero glass">
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 200 200">
+          <defs><linearGradient id="grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+          <circle class="track" cx="100" cy="100" r="88"/>
+          <circle class="prog" id="goalRing" cx="100" cy="100" r="88"/>
+        </svg>
+        <div class="ring-center">
+          <small>อ่านไปแล้ววันนี้</small>
+          <div class="big num" id="total">00:00:00</div>
+          <button class="goal-btn" id="goalBtn"></button>
+        </div>
+      </div>
+      <div class="mini">
+        <div><b class="num" id="mCount">0</b><span>รอบวันนี้</span></div>
+        <div><b class="num" id="mMax">0 น.</b><span>โฟกัสนานสุด</span></div>
+        <div><b class="num" id="mStreak">0</b><span>วันติดกัน 🔥</span></div>
+      </div>
+    </div>
+    <div class="sec-head"><h2>วิชา</h2><span class="muted" style="font-size:13px">แตะการ์ดเพื่อเริ่ม</span></div>
+    <div class="grid" id="subjects"></div>
+  </section>
+
+  <!-- หน้าสถิติ -->
+  <section class="page" id="p-stats">
+    <div class="glass card">
+      <div class="card-head"><h3>7 วันล่าสุด</h3><span class="muted num" id="weekTotal" style="font-size:13px"></span></div>
+      <div class="week" id="week"></div>
+    </div>
+    <div class="glass card">
+      <div class="card-head"><h3>สัดส่วนวิชา · 7 วัน</h3></div>
+      <div class="donut-wrap">
+        <div class="donut" id="donut"><div class="donut-hole"><b class="num" id="donutTotal">0</b><small>ชั่วโมง</small></div></div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+    <div class="glass card">
+      <div class="card-head"><h3>5 สัปดาห์ล่าสุด</h3></div>
+      <div class="heat-days"><span>อา</span><span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span></div>
+      <div class="heat" id="heat"></div>
+      <div class="heat-legend">น้อย <i style="background:var(--surface2)"></i><i style="background:color-mix(in srgb,var(--accent) 30%,transparent)"></i><i style="background:color-mix(in srgb,var(--accent) 55%,transparent)"></i><i style="background:color-mix(in srgb,var(--accent) 80%,transparent)"></i><i style="background:var(--grad)"></i> มาก</div>
+    </div>
+  </section>
+
+  <!-- หน้าอันดับ -->
+  <section class="page" id="p-rank">
+    <div class="glass card">
+      <div class="card-head"><h3>อันดับวันนี้</h3><button class="ghost" id="rankRefresh">รีเฟรช</button></div>
+      <div id="rankList"></div>
+    </div>
+  </section>
+
+  <!-- หน้าตั้งค่า -->
+  <section class="page" id="p-settings">
+    <div class="glass card form">
+      <div class="card-head"><h3>เชื่อม Google Sheets</h3></div>
+      <label>ชื่อเล่น (แสดงในอันดับ)<input id="cfgUser" maxlength="30" placeholder="เช่น มายด์"></label>
+      <label>URL ของ Google Apps Script<input id="cfgApi" placeholder="https://script.google.com/macros/s/.../exec"></label>
+      <div class="row"><button class="btn" id="cfgSave">บันทึก</button><button class="ghost" id="cfgTest">ทดสอบการเชื่อมต่อ</button><button class="ghost" id="cfgSync">ซิงก์ตอนนี้</button></div>
+      <p class="help">เพื่อนที่ใช้ URL เดียวกันจะเห็นกันในหน้าอันดับ ถ้าไม่ใส่ URL ข้อมูลจะเก็บไว้ในเครื่องนี้อย่างเดียว</p>
+    </div>
+    <div class="glass card form">
+      <label>เป้าหมายต่อวัน (นาที)<input id="cfgGoal" type="number" min="10" step="10"></label>
+      <div class="row-between"><span>ธีม</span><div class="seg" id="themeSeg"><button data-t="dark">มืด</button><button data-t="light">สว่าง</button></div></div>
+    </div>
+    <div class="glass card">
+      <button class="ghost danger" id="resetLocal">ล้างข้อมูลในเครื่องนี้</button>
+      <p class="help">ข้อมูลที่ซิงก์ขึ้น Google Sheets แล้วจะไม่ถูกลบ และจะโหลดกลับมาเมื่อเชื่อมต่ออีกครั้ง</p>
+    </div>
+  </section>
+</div>
+
+<nav class="tabbar glass" id="tabbar">
+  <button class="on" data-p="p-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>จับเวลา</button>
+  <button data-p="p-stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>สถิติ</button>
+  <button data-p="p-rank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/></svg>อันดับ</button>
+  <button data-p="p-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>ตั้งค่า</button>
+</nav>
+
+<!-- โหมดโฟกัส -->
+<div id="focus">
+  <div class="f-chip"><i></i><span id="fName"></span></div>
+  <div class="f-ring">
+    <svg viewBox="0 0 240 240"><circle class="track" cx="120" cy="120" r="108"/><circle class="prog" id="fRing" cx="120" cy="120" r="108"/></svg>
+    <div class="f-center">
+      <div class="f-time num" id="fTime">00:00:00</div>
+      <div class="f-sub">รวมวันนี้ <span class="num" id="fTotal">00:00:00</span></div>
+    </div>
+  </div>
+  <button class="f-stop" id="stopBtn"><svg width="14" height="14" viewBox="0 0 14 14"><rect width="14" height="14" rx="3" fill="currentColor"/></svg>หยุดพัก</button>
+  <div class="f-hint">วงแหวนเต็ม 1 รอบ = 1 ชั่วโมง · กด Space เพื่อหยุด</div>
+</div>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div id="toast"></div>
+
+<script>
+/* ===== ตั้งค่า: ใส่ URL ของ Apps Script ตรงนี้ เพื่อให้ทุกคนที่เปิดเว็บเชื่อมต่อได้ทันที ===== */
+const DEFAULT_API = '';
+
+const KEY = 'studyTimer.v2', CFG_KEY = 'studyTimer.cfg';
+const PALETTE = ['#7c5cff','#22d3ee','#f43f5e','#f59e0b','#10b981','#3b82f6','#ec4899','#84cc16','#f97316','#64748b'];
+const DAYS = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+const RING = 2*Math.PI*88, FRING = 2*Math.PI*108;
+
+const store = {
+  get(k,d){ try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const dkey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today = () => dkey(new Date());
+const hms = s => { s = Math.max(0,Math.floor(s)); return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s%3600/60))}:${pad(s%60)}`; };
+const short = s => { s = Math.floor(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60); return h ? `${h} ชม. ${m} น.` : `${m} น.`; };
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const localStr = ms => { const d = new Date(ms); return `${dkey(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+const colorOf = name => PALETTE[[...String(name)].reduce((a,c)=>a + c.charCodeAt(0), 0) % PALETTE.length];
+
+/* ---------- state ---------- */
+let cfg = Object.assign({ user:'', api:DEFAULT_API, theme:'dark', goal:180 }, store.get(CFG_KEY, {}));
+if(!cfg.api && DEFAULT_API) cfg.api = DEFAULT_API;
+let state = store.get(KEY, null) || migrate();
+let syncStatus = 'local', syncing = false, rankData = null, wakeLock = null;
+
+function migrate(){
+  // ย้ายข้อมูลจากเวอร์ชันแรก (ถ้ามี)
+  const old = store.get('studyTimer.v1', null);
+  const s = {
+    subjects: [
+      {id:'s1', name:'คณิตศาสตร์', color:'#7c5cff'},
+      {id:'s2', name:'ภาษาอังกฤษ', color:'#22d3ee'},
+      {id:'s3', name:'วิทยาศาสตร์', color:'#10b981'},
+      {id:'s4', name:'ภาษาไทย', color:'#f59e0b'}
+    ],
+    sessions: [], running: null, subjectsDirty: false
+  };
+  if(old && old.subjects){
+    s.subjects = old.subjects;
+    for(const [date, day] of Object.entries(old.log || {}))
+      for(const [sid, sec] of Object.entries(day)){
+        const sub = old.subjects.find(x => x.id === sid) || {};
+        s.sessions.push({ id:`v1-${date}-${sid}`, date, subjectId:sid, subject:sub.name||'', color:sub.color||'#64748b', seconds:Math.round(sec), synced:false });
+      }
+  }
+  return s;
+}
+const save = () => store.set(KEY, state);
+const saveCfg = () => store.set(CFG_KEY, cfg);
+
+/* ---------- คำนวณเวลา ---------- */
+function liveSeconds(key){
+  if(!state.running) return 0;
+  const d = new Date(key + 'T00:00:00'), from = d.getTime(), to = from + 864e5;
+  const s = Math.max(state.running.start, from), e = Math.min(Date.now(), to);
+  return Math.max(0, (e - s) / 1000);
+}
+function dayMap(key){
+  const m = {};
+  for(const s of state.sessions) if(s.date === key) m[s.subjectId] = (m[s.subjectId] || 0) + s.seconds;
+  if(state.running){ const l = liveSeconds(key); if(l) m[state.running.id] = (m[state.running.id] || 0) + l; }
+  return m;
+}
+const dayTotal = key => Object.values(dayMap(key)).reduce((a,b) => a + b, 0);
+function subjectInfo(id){
+  const s = state.subjects.find(x => x.id === id);
+  if(s) return s;
+  const past = [...state.sessions].reverse().find(x => x.subjectId === id);
+  return { id, name: past?.subject || 'วิชาที่ลบแล้ว', color: past?.color || '#64748b' };
+}
+function streak(){
+  let n = 0; const d = new Date();
+  if(dayTotal(dkey(d)) < 60) d.setDate(d.getDate() - 1);
+  while(dayTotal(dkey(d)) >= 60){ n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+
+/* ---------- เริ่ม / หยุด ---------- */
+function start(id){
+  if(state.running) stop(true);
+  state.running = { id, start: Date.now() };
+  save(); render(); keepAwake(true);
+  const s = subjectInfo(id);
+  pushStatus({ subjectId:id, subject:s.name, color:s.color, start:state.running.start });
+}
+function stop(silent){
+  const r = state.running; if(!r) return;
+  const end = Date.now(), s = subjectInfo(r.id), base = uid();
+  let t = r.start, i = 0;
+  while(t < end){ // แบ่งตามวัน เผื่ออ่านข้ามเที่ยงคืน
+    const next = new Date(t); next.setHours(24,0,0,0);
+    const segEnd = Math.min(end, next.getTime()), sec = Math.round((segEnd - t) / 1000);
+    if(sec >= 1) state.sessions.push({ id:`${base}-${i++}`, date:dkey(new Date(t)), subjectId:r.id, subject:s.name, color:s.color,
+      start:localStr(t), end:localStr(segEnd), seconds:sec, synced:false });
+    t = segEnd;
+  }
+  state.running = null;
+  save(); render(); keepAwake(false);
+  if(!silent) toast(`บันทึกแล้ว · ${s.name} ${short((end - r.start)/1000)}`);
+  pushStatus(null); flush();
+}
+
+async function keepAwake(on){
+  try{
+    if(on && 'wakeLock' in navigator && !wakeLock){
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+    if(!on && wakeLock){ await wakeLock.release(); wakeLock = null; }
+  }catch(e){ wakeLock = null; }
+}
+
+/* ---------- Google Sheets API ---------- */
+async function api(action, payload = {}, method = 'POST'){
+  if(!cfg.api) throw new Error('ยังไม่ได้ใส่ URL');
+  let res;
+  if(method === 'GET'){
+    const u = new URL(cfg.api);
+    for(const [k,v] of Object.entries({ action, ...payload })) u.searchParams.set(k, v);
+    res = await fetch(u, { redirect:'follow' });
+  }else{
+    // ใช้ text/plain เพื่อเลี่ยง CORS preflight ของ Apps Script
+    res = await fetch(cfg.api, { method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({ action, ...payload }) });
+  }
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || 'error');
+  return data;
+}
+const online = () => !!(cfg.api && cfg.user);
+
+async function flush(){
+  if(!online()){ syncStatus = 'local'; return renderSync(); }
+  if(syncing) return;
+  syncing = true; syncStatus = 'syncing'; renderSync();
+  try{
+    if(state.subjectsDirty){
+      await api('subjects', { user:cfg.user, subjects:state.subjects });
+      state.subjectsDirty = false;
+    }
+    const pending = state.sessions.filter(s => !s.synced);
+    if(pending.length){
+      const r = await api('sessions', { user:cfg.user, sessions:pending.map(({synced, ...s}) => s) });
+      const ok = new Set(r.ids);
+      state.sessions.forEach(s => { if(ok.has(s.id)) s.synced = true; });
+    }
+    save(); syncStatus = 'ok';
+  }catch(e){ syncStatus = 'error'; console.warn(e); }
+  syncing = false; renderSync();
+}
+
+async function pull(){
+  if(!online()) return;
+  syncStatus = 'syncing'; renderSync();
+  try{
+    const r = await api('load', { user:cfg.user }, 'GET');
+    const ids = new Set(r.sessions.map(s => s.id));
+    const unsynced = state.sessions.filter(s => !s.synced && !ids.has(s.id));
+    state.sessions = r.sessions.map(s => ({ ...s, seconds:Number(s.seconds) || 0, synced:true })).concat(unsynced);
+    if(r.subjects.length && !state.subjectsDirty) state.subjects = r.subjects;
+    else if(!r.subjects.length && state.subjects.length) state.subjectsDirty = true;
+    save(); render();
+    syncing = false; await flush();
+  }catch(e){ syncStatus = 'error'; renderSync(); console.warn(e); }
+}
+
+let statusTimer = null;
+function pushStatus(running){
+  clearInterval(statusTimer);
+  if(!online()) return;
+  const send = () => api('status', { user:cfg.user, running }).catch(() => {});
+  send();
+  if(running) statusTimer = setInterval(send, 4 * 60 * 1000); // ส่งสัญญาณว่ายังอ่านอยู่
+}
+
+async function fetchRank(){
+  if(!cfg.api){ rankData = null; return renderRank(); }
+  const btn = $('rankRefresh'); btn.textContent = 'กำลังโหลด…';
+  try{ rankData = await api('rank', { date:today() }, 'GET'); rankData.fetchedAt = Date.now(); }
+  catch(e){ toast('โหลดอันดับไม่สำเร็จ'); }
+  btn.textContent = 'รีเฟรช'; renderRank();
+}
+
+/* ---------- render ---------- */
+function renderHeader(){
+  const now = new Date();
+  $('dateText').textContent = now.toLocaleDateString('th-TH', { weekday:'long', day:'numeric', month:'long' });
+  const tot = dayTotal(today()), pct = Math.min(1, tot / (cfg.goal * 60));
+  $('total').textContent = hms(tot);
+  $('goalRing').style.strokeDasharray = RING;
+  $('goalRing').style.strokeDashoffset = RING * (1 - pct);
+  $('goalBtn').textContent = `เป้าหมาย ${short(cfg.goal*60)} · ${Math.floor(pct*100)}%`;
+  const todays = state.sessions.filter(s => s.date === today());
+  const cur = state.running ? (Date.now() - state.running.start) / 1000 : 0;
+  $('mCount').textContent = todays.length + (state.running ? 1 : 0);
+  $('mMax').textContent = short(Math.max(cur, ...todays.map(s => s.seconds), 0));
+  $('mStreak').textContent = streak();
+}
+
+function renderSubjects(){
+  const m = dayMap(today());
+  $('subjects').innerHTML = state.subjects.map(s => {
+    const on = state.running?.id === s.id;
+    return `<div class="subj" style="--c:${esc(s.color)}" data-play="${esc(s.id)}">
+      <div class="subj-top"><span class="sdot"></span><button class="more" data-edit="${esc(s.id)}" aria-label="แก้ไข">•••</button></div>
+      <div class="sname">${esc(s.name)}</div>
+      <div class="stime num" data-time="${esc(s.id)}">${hms(m[s.id] || 0)}</div>
+      <span class="splay">${on ? '<svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="3.5" height="10" rx="1" fill="#fff"/><rect x="7.5" y="1" width="3.5" height="10" rx="1" fill="#fff"/></svg>'
+                              : '<svg width="12" height="14" viewBox="0 0 12 14"><path d="M1 1.5v11a1 1 0 0 0 1.5.9l9-5.5a1 1 0 0 0 0-1.8l-9-5.5A1 1 0 0 0 1 1.5z" fill="#fff"/></svg>'}</span>
+    </div>`;
+  }).join('') + `<button class="subj add-card" id="addSubj"><span>+</span>เพิ่มวิชา</button>`;
+}
+
+function renderStats(){
+  const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return d; });
+  const maps = days.map(d => dayMap(dkey(d)));
+  const totals = maps.map(m => Object.values(m).reduce((a,b) => a + b, 0));
+  const max = Math.max(3600, ...totals), sum = totals.reduce((a,b) => a + b, 0);
+  $('weekTotal').textContent = `รวม ${short(sum)}`;
+  $('week').innerHTML = days.map((d, i) => {
+    const segs = Object.entries(maps[i]).sort((a,b) => b[1] - a[1])
+      .map(([id, sec]) => `<i style="height:${sec / max * 100}%;background:${esc(subjectInfo(id).color)}"></i>`).join('');
+    return `<div class="wcol ${i === 6 ? 'today' : ''}"><div class="wval num">${totals[i] ? (totals[i]/3600).toFixed(1) : ''}</div>
+      <div class="wbar">${segs}</div><div class="wlab">${i === 6 ? 'วันนี้' : DAYS[d.getDay()]}</div></div>`;
+  }).join('');
+
+  // donut
+  const agg = {};
+  maps.forEach(m => Object.entries(m).forEach(([id, s]) => agg[id] = (agg[id] || 0) + s));
+  const rows = Object.entries(agg).filter(([,s]) => s >= 1).sort((a,b) => b[1] - a[1]);
+  let acc = 0;
+  const stops = rows.map(([id, s]) => { const a = acc / sum * 360; acc += s; return `${subjectInfo(id).color} ${a}deg ${acc / sum * 360}deg`; });
+  $('donut').style.background = rows.length ? `conic-gradient(${stops.join(',')})` : '';
+  $('donutTotal').textContent = (sum / 3600).toFixed(1);
+  $('legend').innerHTML = rows.length
+    ? rows.slice(0, 6).map(([id, s]) => { const x = subjectInfo(id);
+        return `<div class="lg"><i style="background:${esc(x.color)}"></i><span class="n">${esc(x.name)}</span><span class="t num">${Math.round(s / sum * 100)}%</span></div>`; }).join('')
+    : '<div class="muted" style="font-size:13.5px">ยังไม่มีข้อมูล</div>';
+
+  // heatmap 5 สัปดาห์
+  const now = new Date(), startD = new Date(now); startD.setDate(now.getDate() - now.getDay() - 28);
+  let cells = '';
+  for(let i = 0; i < 35; i++){
+    const d = new Date(startD); d.setDate(startD.getDate() + i);
+    const k = dkey(d), h = d > now ? 0 : dayTotal(k) / 3600;
+    const l = h === 0 ? 0 : h < 1 ? 1 : h < 2 ? 2 : h < 4 ? 3 : 4;
+    cells += `<i data-l="${l}" class="${k === today() ? 'today' : ''} ${d > now ? 'future' : ''}" title="${d.getDate()}/${d.getMonth()+1} · ${short(h*3600)}"></i>`;
+  }
+  $('heat').innerHTML = cells;
+}
+
+function renderRank(){
+  const el = $('rankList');
+  if(!cfg.api){
+    el.innerHTML = `<div class="empty">ยังไม่ได้เชื่อม Google Sheets<br>ไปที่หน้า <b>ตั้งค่า</b> เพื่อใส่ URL แล้วชวนเพื่อนมาแข่งกัน</div>`; return;
+  }
+  if(!rankData){ el.innerHTML = '<div class="empty">กำลังโหลด…</div>'; return; }
+  const map = {};
+  rankData.totals.forEach(t => map[t.user] = { user:t.user, seconds:Number(t.seconds) });
+  const midnight = new Date(); midnight.setHours(0,0,0,0);
+  const drift = rankData.serverTime ? rankData.fetchedAt - rankData.serverTime : 0;
+  rankData.live.forEach(l => {
+    if(l.user === cfg.user) return; // ของเราใช้ข้อมูลในเครื่อง
+    const r = map[l.user] = map[l.user] || { user:l.user, seconds:0 };
+    r.live = l; r.seconds += Math.max(0, (Date.now() - drift - Math.max(l.start, midnight.getTime())) / 1000);
+  });
+  if(cfg.user){
+    map[cfg.user] = { user:cfg.user, seconds:dayTotal(today()), live: state.running ? { subject:subjectInfo(state.running.id).name } : null };
+  }
+  const list = Object.values(map).filter(r => r.seconds >= 1 || r.live).sort((a,b) => b.seconds - a.seconds);
+  if(!list.length){ el.innerHTML = '<div class="empty">วันนี้ยังไม่มีใครเริ่มอ่าน เป็นคนแรกเลย!</div>'; return; }
+  const medal = ['🥇','🥈','🥉'];
+  el.innerHTML = list.map((r, i) => `
+    <div class="rk ${r.user === cfg.user ? 'me' : ''}">
+      <div class="pos">${medal[i] || i + 1}</div>
+      <div class="av" style="background:${colorOf(r.user)}">${esc([...r.user][0] || '?').toUpperCase()}${r.live ? '<span class="live"></span>' : ''}</div>
+      <div class="who"><b>${esc(r.user)}${r.user === cfg.user ? ' (คุณ)' : ''}</b>
+        <small class="${r.live ? 'on' : ''}">${r.live ? 'กำลังอ่าน · ' + esc(r.live.subject) : 'พักอยู่'}</small></div>
+      <div class="tm num">${hms(r.seconds)}</div>
+    </div>`).join('');
+}
+
+function renderFocus(){
+  const f = $('focus');
+  if(!state.running){ f.classList.remove('on'); document.title = 'Study Timer'; return; }
+  const s = subjectInfo(state.running.id), sec = (Date.now() - state.running.start) / 1000;
+  f.classList.add('on');
+  f.style.setProperty('--fc', s.color);
+  $('fName').textContent = s.name;
+  $('fTime').textContent = hms(sec);
+  $('fTotal').textContent = hms(dayTotal(today()));
+  $('fRing').style.strokeDasharray = FRING;
+  $('fRing').style.strokeDashoffset = FRING * (1 - (sec % 3600) / 3600);
+  document.title = `${hms(sec)} · ${s.name}`;
+}
+
+function renderSync(){
+  const pending = state.sessions.filter(s => !s.synced).length;
+  const text = { local:'ในเครื่อง', syncing:'กำลังซิงก์…', ok:'ซิงก์แล้ว', error:`ค้าง ${pending} รายการ` }[syncStatus];
+  $('syncChip').dataset.s = syncStatus;
+  $('syncText').textContent = syncStatus === 'error' && !pending ? 'เชื่อมต่อไม่ได้' : text;
+}
+
+function renderSettings(){
+  $('cfgUser').value = cfg.user; $('cfgApi').value = cfg.api; $('cfgGoal').value = cfg.goal;
+  document.querySelectorAll('#themeSeg button').forEach(b => b.classList.toggle('on', b.dataset.t === cfg.theme));
+}
+
+function applyTheme(){
+  document.documentElement.dataset.theme = cfg.theme;
+  document.querySelector('meta[name=theme-color]').content = cfg.theme === 'dark' ? '#0b0c10' : '#f5f6fb';
+}
+
+function render(){ renderHeader(); renderSubjects(); renderStats(); renderFocus(); renderSync(); if(isPage('p-rank')) renderRank(); }
+const isPage = id => $(id).classList.contains('on');
+
+/* ---------- modal & toast ---------- */
+function openModal(html){ $('sheet').innerHTML = html; $('modal').classList.add('on'); setTimeout(() => $('sheet').querySelector('input')?.focus(), 50); }
+function closeModal(){ $('modal').classList.remove('on'); }
+$('modal').addEventListener('click', e => { if(e.target.id === 'modal' || e.target.dataset.close !== undefined) closeModal(); });
+
+let toastT;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2600); }
+
+function subjectModal(id){
+  const s = id ? state.subjects.find(x => x.id === id) : { name:'', color:PALETTE[state.subjects.length % PALETTE.length] };
+  let color = s.color;
+  openModal(`
+    <h3>${id ? 'แก้ไขวิชา' : 'เพิ่มวิชาใหม่'}</h3>
+    <div class="form"><label>ชื่อวิชา<input id="mName" maxlength="30" value="${esc(s.name)}" placeholder="เช่น ฟิสิกส์"></label></div>
+    <div class="muted" style="font-size:13px">สี</div>
+    <div class="swatches">${PALETTE.map(c => `<button class="sw ${c === color ? 'on' : ''}" style="--c:${c}" data-c="${c}"></button>`).join('')}</div>
+    <div class="row">
+      ${id ? '<button class="ghost danger" id="mDel" style="margin-right:auto">ลบวิชา</button>' : ''}
+      <button class="ghost" data-close>ยกเลิก</button><button class="btn" id="mSave">บันทึก</button>
+    </div>`);
+  $('sheet').querySelectorAll('.sw').forEach(b => b.onclick = () => {
+    color = b.dataset.c; $('sheet').querySelectorAll('.sw').forEach(x => x.classList.toggle('on', x === b));
+  });
+  const doSave = () => {
+    const name = $('mName').value.trim(); if(!name) return $('mName').focus();
+    if(id) Object.assign(s, { name, color }); else state.subjects.push({ id:'s' + uid(), name, color });
+    state.subjectsDirty = true; save(); render(); closeModal(); flush();
+  };
+  $('mSave').onclick = doSave;
+  $('mName').onkeydown = e => { if(e.key === 'Enter') doSave(); };
+  if(id) $('mDel').onclick = () => {
+    if(!confirm(`ลบวิชา "${s.name}"? เวลาที่บันทึกไว้ยังอยู่ในสถิติ`)) return;
+    if(state.running?.id === id) stop();
+    state.subjects = state.subjects.filter(x => x.id !== id);
+    state.subjectsDirty = true; save(); render(); closeModal(); flush();
+  };
+}
+
+function welcomeModal(){
+  openModal(`
+    <h3>ยินดีต้อนรับ 👋</h3>
+    <p class="help" style="margin:-6px 0 16px">ตั้งชื่อเล่นสำหรับแสดงในอันดับกับเพื่อน</p>
+    <div class="form"><label>ชื่อเล่น<input id="wName" maxlength="30" placeholder="เช่น มายด์"></label></div>
+    <div class="row"><button class="ghost" data-close>ข้ามไปก่อน</button><button class="btn" id="wSave">เริ่มเลย</button></div>`);
+  const go = () => { const v = $('wName').value.trim(); if(!v) return $('wName').focus();
+    cfg.user = v; saveCfg(); renderSettings(); closeModal(); pull(); };
+  $('wSave').onclick = go; $('wName').onkeydown = e => { if(e.key === 'Enter') go(); };
+}
+
+/* ---------- events ---------- */
+$('subjects').addEventListener('click', e => {
+  if(e.target.closest('#addSubj')) return subjectModal();
+  const ed = e.target.closest('[data-edit]'); if(ed) return subjectModal(ed.dataset.edit);
+  const p = e.target.closest('[data-play]'); if(p) start(p.dataset.play);
+});
+$('stopBtn').onclick = () => stop();
+$('goalBtn').onclick = () => { showPage('p-settings'); $('cfgGoal').focus(); };
+$('syncChip').onclick = () => online() ? pull() : showPage('p-settings');
+$('rankRefresh').onclick = fetchRank;
+
+$('cfgSave').onclick = () => {
+  const user = $('cfgUser').value.trim(), apiUrl = $('cfgApi').value.trim();
+  if(apiUrl && !/^https:\/\/script\.google(usercontent)?\.com\//.test(apiUrl)) return toast('URL ต้องขึ้นต้นด้วย https://script.google.com/');
+  const changed = user !== cfg.user || apiUrl !== cfg.api;
+  cfg.user = user; cfg.api = apiUrl; saveCfg(); toast('บันทึกแล้ว');
+  if(changed){ rankData = null; online() ? pull() : (syncStatus = 'local', renderSync()); }
+};
+$('cfgTest').onclick = async () => {
+  const prev = cfg.api; cfg.api = $('cfgApi').value.trim();
+  try{ await api('ping', {}, 'GET'); toast('✅ เชื่อมต่อสำเร็จ'); }
+  catch(e){ toast('❌ เชื่อมต่อไม่ได้ ตรวจ URL และสิทธิ์ "ทุกคน"'); }
+  cfg.api = prev;
+};
+$('cfgSync').onclick = () => online() ? pull() : toast('ใส่ชื่อเล่นและ URL ก่อน');
+$('cfgGoal').onchange = e => { const n = parseInt(e.target.value, 10); if(n > 0){ cfg.goal = n; saveCfg(); renderHeader(); } };
+$('themeSeg').onclick = e => { const t = e.target.dataset.t; if(t){ cfg.theme = t; saveCfg(); applyTheme(); renderSettings(); } };
+$('resetLocal').onclick = () => {
+  const pending = state.sessions.filter(s => !s.synced).length;
+  if(!confirm(pending ? `มี ${pending} รายการที่ยังไม่ได้ซิงก์ จะหายไปด้วย ยืนยันล้างข้อมูล?` : 'ล้างข้อมูลในเครื่องนี้?')) return;
+  state = migrate(); state.sessions = []; save(); render(); pull(); toast('ล้างข้อมูลแล้ว');
+};
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === id));
+  document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.p === id));
+  if(id === 'p-stats') renderStats();
+  if(id === 'p-rank'){ renderRank(); fetchRank(); }
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+$('tabbar').onclick = e => { const b = e.target.closest('button'); if(b) showPage(b.dataset.p); };
+
+document.addEventListener('keydown', e => {
+  if(e.code === 'Space' && state.running && !/INPUT|TEXTAREA/.test(e.target.tagName)){ e.preventDefault(); stop(); }
+  if(e.key === 'Escape') closeModal();
+});
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState !== 'visible') return;
+  render(); if(state.running) keepAwake(true);
+  flush(); if(isPage('p-rank')) fetchRank();
+});
+
+/* ---------- loop ---------- */
+setInterval(() => {
+  renderHeader(); renderFocus();
+  if(state.running){
+    const el = document.querySelector(`[data-time="${CSS.escape(state.running.id)}"]`);
+    if(el) el.textContent = hms(dayMap(today())[state.running.id] || 0);
+    if(isPage('p-rank') && rankData) renderRank();
+  }
+}, 1000);
+setInterval(() => { if(isPage('p-rank') && document.visibilityState === 'visible') fetchRank(); }, 30000);
+setInterval(() => { if(state.sessions.some(s => !s.synced) || state.subjectsDirty) flush(); }, 60000);
+
+applyTheme(); renderSettings(); render();
+if(state.running) keepAwake(true);
+if(!cfg.user) welcomeModal(); else pull();
+</script>
+</body>
+</html>
