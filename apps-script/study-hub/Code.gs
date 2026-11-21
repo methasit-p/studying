@@ -14,7 +14,7 @@
 const APP_NAME = 'Study Hub';
 const TASK_TYPES = ['Homework', 'Project', 'Group Project'];
 const STATUSES = ['To do', 'In progress', 'Done', 'Dismissed'];
-const SCHEMA_VERSION = '8';
+const SCHEMA_VERSION = '9';
 const DT_FORMAT = "yyyy-MM-dd'T'HH:mm";
 
 const SHEETS = {
@@ -29,6 +29,7 @@ const SHEETS = {
   RuCourses:  ['id', 'code', 'name', 'credits', 'prereqs', 'category', 'exam'],
   RuTerms:    ['id', 'year', 'semester'],
   RuPlan:     ['id', 'termId', 'courseId', 'passed', 'grade', 'kind', 'retakeOf'],
+  RuToc:      ['id', 'courseCode', 'parentId', 'level', 'title', 'done', 'doneAt', 'pos'],
   Books:      ['id', 'title', 'author', 'isbn', 'cover', 'pages', 'currentPage', 'status', 'rating', 'category',
                'courseCode', 'location', 'link', 'notes', 'addedAt', 'startedAt', 'finishedAt'],
   ClassroomFiles: ['id', 'linkId', 'courseId', 'courseName', 'source', 'postId', 'postTitle', 'sourceFileId',
@@ -1143,6 +1144,9 @@ function getRu_() {
     courses: new Table_('RuCourses').rows,
     terms: new Table_('RuTerms').rows.sort(function (a, b) { return ruTermOrder_(a) - ruTermOrder_(b); }),
     plan: new Table_('RuPlan').rows.map(function (p) { return Object.assign({}, p, { passed: p.passed === 'TRUE' }); }),
+    toc: new Table_('RuToc').rows.map(function (r) {
+      return Object.assign({}, r, { done: r.done === 'TRUE', level: parseInt(r.level, 10) || 1, pos: parseInt(r.pos, 10) || 0 });
+    }),
     creditsNeeded: settings.ruCreditsNeeded || '',
     gpaPolicy: settings.ruGpaPolicy === 'all' ? 'all' : 'latest',
     limits: RU_LIMITS
@@ -1250,6 +1254,70 @@ function ruDeleteCourse(id) {
     t.save();
     p.save();
     return getAppData();
+  });
+}
+
+/* ---------- Course contents (table of contents checklist) ---------- */
+
+var RU_TOC_MAX = 500;
+
+/**
+ * Replaces the table of contents of one course.
+ * items = [{ id?, level: 1-3, title }] in reading order. Items that keep their id keep their tick.
+ */
+function ruTocSave(courseCode, items) {
+  return withLock_(function () {
+    const code = String(courseCode || '').toUpperCase().replace(/\s+/g, '');
+    if (!code) throw new Error('Pick a course first.');
+    if (!new Table_('RuCourses').rows.some(function (c) { return c.code === code; })) {
+      throw new Error('Course ' + code + ' is not in your course list.');
+    }
+    const list = Array.isArray(items) ? items : [];
+    if (list.length > RU_TOC_MAX) throw new Error('A course can have up to ' + RU_TOC_MAX + ' topics.');
+    const t = new Table_('RuToc');
+    const old = {};
+    t.rows.forEach(function (r) { if (r.courseCode === code) old[r.id] = r; });
+    t.removeWhere(function (r) { return r.courseCode === code; });
+    const parents = [];
+    let prev = 0, pos = 0;
+    list.forEach(function (it) {
+      const title = String((it && it.title) || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+      if (!title) return;
+      let level = Math.max(1, Math.min(3, parseInt(it.level, 10) || 1));
+      if (level > prev + 1) level = prev + 1;
+      const kept = it.id && old[it.id] ? old[it.id] : null;
+      const id = kept ? kept.id : uid_();
+      parents[level - 1] = id;
+      parents.length = level;
+      t.insert({
+        id: id, courseCode: code, parentId: level > 1 ? parents[level - 2] : '', level: level, title: title,
+        done: kept ? kept.done : 'FALSE', doneAt: kept ? kept.doneAt : '', pos: pos++
+      });
+      prev = level;
+    });
+    t.save();
+    return getAppData();
+  });
+}
+
+/** Ticks or unticks topics. ids = one id or a list. A topic that was already ticked keeps its first date. */
+function ruTocSetDone(ids, done) {
+  return withLock_(function () {
+    const want = {};
+    (Array.isArray(ids) ? ids : [ids]).slice(0, RU_TOC_MAX).forEach(function (id) { want[String(id)] = true; });
+    const t = new Table_('RuToc');
+    const stamp = nowStr_();
+    let n = 0;
+    t.rows.forEach(function (r) {
+      if (!want[r.id]) return;
+      const was = r.done === 'TRUE';
+      r.done = done ? 'TRUE' : 'FALSE';
+      r.doneAt = done ? (was && r.doneAt ? r.doneAt : stamp) : '';
+      n++;
+    });
+    if (!n) throw new Error('Could not find those topics. Reload the page and try again.');
+    t.save();
+    return { updated: n, doneAt: done ? stamp : '' };
   });
 }
 
@@ -1868,6 +1936,7 @@ const API_FUNCTIONS = {
   ruAddTerm: ruAddTerm, ruDeleteTerm: ruDeleteTerm, ruPlanAdd: ruPlanAdd, ruPlanMove: ruPlanMove,
   ruPlanRemove: ruPlanRemove, ruPlanPassed: ruPlanPassed, ruSetCreditsNeeded: ruSetCreditsNeeded,
   ruLoadCurriculum: ruLoadCurriculum, ruSetGrade: ruSetGrade, ruRetake: ruRetake, ruSetGpaPolicy: ruSetGpaPolicy,
+  ruTocSave: ruTocSave, ruTocSetDone: ruTocSetDone,
   saveBook: saveBook, setBookStatus: setBookStatus, deleteBook: deleteBook, searchBooks: searchBooks,
   copyClassroomFilesNow: copyClassroomFilesNow, saveFilesSettings: saveFilesSettings,
   listToolFiles: listToolFiles, getToolFile: getToolFile, saveToolFile: saveToolFile
