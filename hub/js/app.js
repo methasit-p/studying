@@ -137,7 +137,7 @@ function openDialog(html) {
   if (first) first.focus();
   return d;
 }
-function closeDialog() { const d = $('#dlg'); if (d.open) d.close(); }
+function closeDialog() { const d = $('#dlg'); if (d.open) d.close(); delete d.dataset.sticky; d.classList.remove('te-dlg'); }
 
 function confirmBox(title, message, okText, extraCheck) {
   return new Promise(resolve => {
@@ -926,7 +926,7 @@ function promptBox(title, label, value, okText) {
 
 /* ================= Ramkhamhaeng Hub ================= */
 S.ru = { tab: 'timer', month: null, day: null, termId: null, q: '', group: '', chartDays: 14, importRows: null };
-const RU_BLANK = { sessions: [], courses: [], terms: [], plan: [], creditsNeeded: '', limits: { regular: { min: 9, max: 22 }, summer: { min: 0, max: 9 } } };
+const RU_BLANK = { sessions: [], courses: [], terms: [], plan: [], toc: [], creditsNeeded: '', limits: { regular: { min: 9, max: 22 }, summer: { min: 0, max: 9 } } };
 function ru() { return (S.data && S.data.ru) || RU_BLANK; }
 
 const pad2 = n => String(n).padStart(2, '0');
@@ -1113,11 +1113,11 @@ function binderTimer() {
 
 /* ---------- Page ---------- */
 function viewRu() {
-  const tabs = [['timer', 'Reading timer'], ['calendar', 'Reading calendar'], ['planner', 'Course planner']];
+  const tabs = [['timer', 'Reading timer'], ['calendar', 'Reading calendar'], ['contents', 'Course contents'], ['planner', 'Course planner']];
   return `<div class="page-head ru-head"><div><h2>Ramkhamhaeng Hub <span class="ru-badge">Faculty of Law<\/span><\/h2>
-      <p>Time your reading, see it on a calendar, and plan your courses semester by semester within the credit rules.<\/p><\/div><\/div>
+      <p>Time your reading, see it on a calendar, tick off each course's contents, and plan your courses semester by semester within the credit rules.<\/p><\/div><\/div>
     <div class="ru-tabs">${tabs.map(t => `<button class="chip ${S.ru.tab === t[0] ? 'active' : ''}" data-act="ru-tab" data-tab="${t[0]}">${t[1]}<\/button>`).join('')}<\/div>
-    ${S.ru.tab === 'calendar' ? ruCalendar() : S.ru.tab === 'planner' ? ruPlanner() : ruTimer()}`;
+    ${S.ru.tab === 'calendar' ? ruCalendar() : S.ru.tab === 'planner' ? ruPlanner() : S.ru.tab === 'contents' ? ruContents() : ruTimer()}`;
 }
 
 function courseOptions(selected) {
